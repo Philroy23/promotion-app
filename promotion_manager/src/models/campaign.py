@@ -85,29 +85,21 @@ class Campaign(db.Model):
 
         return performance
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'start_date': self.start_date.isoformat() if self.start_date else None,
-            'end_date': self.end_date.isoformat() if self.end_date else None,
-            'is_active': self.is_active,
-            'created_by': self.created_by,
-            'available_gadgets': self.available_gadgets,
-            'target_audience': self.target_audience,
-            'budget': self.budget,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'conversion_rate': self.get_campaign_conversion_rate(),
-            'promoters_performance': self.get_promoters_performance(),
-            'total_sales': self.get_total_sales(),
-            'total_people_approached': self.get_total_people_approached(),
-            'total_people_purchased': self.get_total_people_purchased(),
-            'is_current': self.is_current(),
-            'is_upcoming': self.is_upcoming(),
-            'is_past': self.is_past()
-        }
-
-    def __repr__(self):
-        return f'<Campaign {self.name}>'
+   def to_dict(self):
+    return {
+        'id': self.id,
+        'name': self.name,
+        'description': self.description,
+        'start_date': self.start_date.isoformat() if self.start_date else None,
+        'end_date': self.end_date.isoformat() if self.end_date else None,
+        'is_active': self.is_active,
+        'created_by': self.created_by,
+        'available_gadgets': self.available_gadgets,
+        'target_audience': self.target_audience,
+        'budget': self.budget,
+        'created_at': self.created_at.isoformat() if self.created_at else None,
+        'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        'is_current': self.is_current(),
+        'is_upcoming': self.is_upcoming(),
+        'is_past': self.is_past()
+    }
