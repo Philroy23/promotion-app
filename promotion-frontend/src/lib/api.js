@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuration de base pour axios
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = 'https://promotion-app-backend.onrender.com';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
