@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, time
-from src.main import db
-from src.models.user import User
-from src.models.campaign import Campaign
-from src.models.promotion_data import PromotionData
+from main import db
+from models.user import User
+from models.campaign import Campaign
+from models.promotion_data import PromotionData
 
 promotion_data_bp = Blueprint('promotion_data', __name__, url_prefix='/api/promotion-data')
 
@@ -18,11 +18,9 @@ def get_promotion_data():
         if not user:
             return jsonify({'error': 'Utilisateur non trouvé'}), 404
         
-        # Les promotrices ne voient que leurs propres données
         if user.is_promotrice():
             data = PromotionData.query.filter_by(promoter_id=current_user_id).all()
         else:
-            # Les superviseurs et administrateurs voient toutes les données
             data = PromotionData.query.all()
         
         return jsonify({
@@ -44,7 +42,6 @@ def get_promotion_data_item(data_id):
         if not data_item:
             return jsonify({'error': 'Données non trouvées'}), 404
         
-        # Les promotrices ne peuvent voir que leurs propres données
         if user.is_promotrice() and data_item.promoter_id != current_user_id:
             return jsonify({'error': 'Accès non autorisé'}), 403
         
@@ -65,39 +62,34 @@ def create_promotion_data():
         
         data = request.get_json()
         
-        # Validation des données obligatoires
         required_fields = ['promoter_name', 'store_name', 'mission_date', 'campaign_id']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'Le champ {field} est requis'}), 400
         
-        # Vérifier que la campagne existe
         campaign = Campaign.query.get(data['campaign_id'])
         if not campaign:
             return jsonify({'error': 'Campagne non trouvée'}), 404
         
-        # Conversion des données
         try:
             mission_date = datetime.strptime(data['mission_date'], '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'error': 'Format de date invalide (YYYY-MM-DD)'}), 400
         
         arrival_time = None
-        departure_time = None
-        
         if data.get('arrival_time'):
             try:
                 arrival_time = datetime.strptime(data['arrival_time'], '%H:%M').time()
             except ValueError:
                 return jsonify({'error': 'Format d\'heure d\'arrivée invalide (HH:MM)'}), 400
         
+        departure_time = None
         if data.get('departure_time'):
             try:
                 departure_time = datetime.strptime(data['departure_time'], '%H:%M').time()
             except ValueError:
                 return jsonify({'error': 'Format d\'heure de départ invalide (HH:MM)'}), 400
         
-        # Créer les nouvelles données promotionnelles
         promotion_data = PromotionData(
             promoter_name=data['promoter_name'],
             promoter_contact=data.get('promoter_contact'),
@@ -139,13 +131,11 @@ def update_promotion_data(data_id):
         if not data_item:
             return jsonify({'error': 'Données non trouvées'}), 404
         
-        # Les promotrices ne peuvent modifier que leurs propres données
         if user.is_promotrice() and data_item.promoter_id != current_user_id:
             return jsonify({'error': 'Accès non autorisé'}), 403
         
         data = request.get_json()
         
-        # Mise à jour des champs
         if 'promoter_name' in data:
             data_item.promoter_name = data['promoter_name']
         if 'promoter_contact' in data:
@@ -197,7 +187,6 @@ def delete_promotion_data(data_id):
         if not data_item:
             return jsonify({'error': 'Données non trouvées'}), 404
         
-        # Seuls les administrateurs ou le propriétaire peuvent supprimer
         if not (user.is_administrateur() or user.is_super_administrateur()) and data_item.promoter_id != current_user_id:
             return jsonify({'error': 'Permissions insuffisantes'}), 403
         
@@ -217,16 +206,13 @@ def get_promotion_data_by_campaign(campaign_id):
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Vérifier que la campagne existe
         campaign = Campaign.query.get(campaign_id)
         if not campaign:
             return jsonify({'error': 'Campagne non trouvée'}), 404
         
-        # Les promotrices ne voient que leurs propres données
         if user.is_promotrice():
             data = PromotionData.query.filter_by(campaign_id=campaign_id, promoter_id=current_user_id).all()
         else:
-            # Les superviseurs et administrateurs voient toutes les données de la campagne
             data = PromotionData.query.filter_by(campaign_id=campaign_id).all()
         
         return jsonify({

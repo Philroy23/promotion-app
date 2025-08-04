@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, date
-from src.main import db
-from src.models.user import User
-from src.models.campaign import Campaign
+from main import db
+from models.user import User
+from models.campaign import Campaign
 
 campaign_bp = Blueprint('campaign', __name__, url_prefix='/api/campaigns')
 
@@ -17,11 +17,9 @@ def get_campaigns():
         if not user:
             return jsonify({'error': 'Utilisateur non trouvé'}), 404
         
-        # Les promotrices ne voient que les campagnes actives
         if user.is_promotrice():
             campaigns = Campaign.query.filter_by(is_active=True).all()
         else:
-            # Les superviseurs et administrateurs voient toutes les campagnes
             campaigns = Campaign.query.all()
         
         return jsonify({
@@ -52,17 +50,14 @@ def create_campaign():
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Seuls les superviseurs et administrateurs peuvent créer des campagnes
         if not (user.is_superviseur() or user.is_administrateur() or user.is_super_administrateur()):
             return jsonify({'error': 'Permissions insuffisantes'}), 403
         
         data = request.get_json()
         
-        # Validation des données
         if not data.get('name') or not data.get('start_date') or not data.get('end_date'):
             return jsonify({'error': 'Nom, date de début et date de fin requis'}), 400
         
-        # Conversion des dates
         try:
             start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
@@ -72,7 +67,6 @@ def create_campaign():
         if start_date > end_date:
             return jsonify({'error': 'La date de début doit être antérieure à la date de fin'}), 400
         
-        # Créer la nouvelle campagne
         campaign = Campaign(
             name=data['name'],
             description=data.get('description'),
@@ -103,7 +97,6 @@ def update_campaign(campaign_id):
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Seuls les superviseurs et administrateurs peuvent modifier des campagnes
         if not (user.is_superviseur() or user.is_administrateur() or user.is_super_administrateur()):
             return jsonify({'error': 'Permissions insuffisantes'}), 403
         
@@ -113,7 +106,6 @@ def update_campaign(campaign_id):
         
         data = request.get_json()
         
-        # Mise à jour des champs
         if 'name' in data:
             campaign.name = data['name']
         if 'description' in data:
@@ -151,7 +143,6 @@ def delete_campaign(campaign_id):
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Seuls les administrateurs peuvent supprimer des campagnes
         if not (user.is_administrateur() or user.is_super_administrateur()):
             return jsonify({'error': 'Permissions insuffisantes'}), 403
         
@@ -175,7 +166,6 @@ def get_campaign_stats(campaign_id):
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Seuls les superviseurs et administrateurs peuvent voir les statistiques détaillées
         if not (user.is_superviseur() or user.is_administrateur() or user.is_super_administrateur()):
             return jsonify({'error': 'Permissions insuffisantes'}), 403
         

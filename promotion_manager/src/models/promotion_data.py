@@ -1,4 +1,4 @@
-from src.database import db # Import db from main.py
+from database import db
 from datetime import datetime, date
 
 class PromotionData(db.Model):
@@ -24,12 +24,10 @@ class PromotionData(db.Model):
     # Performance commerciale
     people_approached = db.Column(db.Integer, default=0)
     people_purchased = db.Column(db.Integer, default=0)
-    
-    # Informations complémentaires
     customer_comments = db.Column(db.Text, nullable=True)
     gadgets_distributed = db.Column(db.String(200), nullable=True)
     
-    # Relations avec les autres modèles
+    # Relations
     promoter_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id'), nullable=False)
     
@@ -38,16 +36,14 @@ class PromotionData(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def get_conversion_rate(self):
-        """Calcule le taux de conversion pour cette entrée"""
-        if self.people_approached == 0:
-            return 0
-        return round((self.people_purchased / self.people_approached) * 100, 2)
+        if self.people_approached and self.people_approached > 0:
+            return round((self.people_purchased / self.people_approached) * 100, 2)
+        return 0
 
     def get_sales_percentage(self):
-        """Calcule le pourcentage de ventes par rapport au stock initial"""
-        if self.initial_stock == 0:
-            return 0
-        return round((self.products_sold / self.initial_stock) * 100, 2)
+        if self.initial_stock and self.initial_stock > 0:
+            return round((self.products_sold / self.initial_stock) * 100, 2)
+        return 0
 
     def to_dict(self):
         return {

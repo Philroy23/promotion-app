@@ -1,4 +1,4 @@
-from src.database import db # Import db from main.py
+from database import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
@@ -7,15 +7,15 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=True) # Email can be optional
-    password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(50), default='promotrice', nullable=False) # promotrice, superviseur, administrateur, super_administrateur
+    email = db.Column(db.String(120), nullable=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(50), nullable=False, default='promotrice')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    campaigns_created = db.relationship('Campaign', backref='creator', lazy=True)
+    # Relations
     promotion_data = db.relationship('PromotionData', backref='promoter', lazy=True)
+    campaigns_created = db.relationship('Campaign', backref='creator', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, send_from_directory
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from src.database import db
+from database import db
 import os
 
 def create_app():
@@ -20,19 +20,19 @@ def create_app():
     CORS(app) # Permet les requêtes cross-origin pour le développement
 
     # Importation des modèles pour s'assurer qu'ils sont connus de SQLAlchemy
-    from src.models.user import User
-    from src.models.campaign import Campaign
-    from src.models.promotion_data import PromotionData
+    from models.user import User
+    from models.campaign import Campaign
+    from models.promotion_data import PromotionData
 
     # Création des tables de la base de données si elles n'existent pas
     with app.app_context():
         db.create_all()
 
     # Enregistrement des blueprints (routes API)
-    from src.routes.auth import auth_bp
-    from src.routes.campaign import campaign_bp
-    from src.routes.promotion_data import promotion_data_bp
-    from src.routes.user import user_bp
+    from routes.auth import auth_bp
+    from routes.campaign import campaign_bp
+    from routes.promotion_data import promotion_data_bp
+    from routes.user import user_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(campaign_bp)
