@@ -1,188 +1,109 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from database import db
 from datetime import datetime, date
-from main import db
-from models.user import User
-from models.campaign import Campaign
 
-campaign_bp = Blueprint('campaign', __name__, url_prefix='/api/campaigns')
+class Campaign(db.Model):
+    __tablename__ = 'campaigns'
 
-@campaign_bp.route('/', methods=['GET'])
-@jwt_required()
-def get_campaigns():
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'Utilisateur non trouvé'}), 404
-        
-        if user.is_promotrice():
-            campaigns = Campaign.query.filter_by(is_active=True).all()
-        else:
-            campaigns = Campaign.query.all()
-        
-        return jsonify({
-            'campaigns': [campaign.to_dict() for campaign in campaigns]
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    available_gadgets = db.Column(db.Text, nullable=True)
+    target_audience = db.Column(db.String(200), nullable=True)
+    budget = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-@campaign_bp.route('/<int:campaign_id>', methods=['GET'])
-@jwt_required()
-def get_campaign(campaign_id):
-    try:
-        campaign = Campaign.query.get(campaign_id)
-        
-        if not campaign:
-            return jsonify({'error': 'Campagne non trouvée'}), 404
-        
-        return jsonify({'campaign': campaign.to_dict()}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    # Relations
+    promotion_data = db.relationship('PromotionData', backref='campaign', lazy=True)
 
-@campaign_bp.route('/', methods=['POST'])
-@jwt_required()
-def create_campaign():
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not (user.is_superviseur() or user.is_administrateur() or user.is_super_administrateur()):
-            return jsonify({'error': 'Permissions insuffisantes'}), 403
-        
-        data = request.get_json()
-        
-        if not data.get('name') or not data.get('start_date') or not data.get('end_date'):
-            return jsonify({'error': 'Nom, date de début et date de fin requis'}), 400
-        
-        try:
-            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
-            end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'error': 'Format de date invalide (YYYY-MM-DD)'}), 400
-        
-        if start_date > end_date:
-            return jsonify({'error': 'La date de début doit être antérieure à la date de fin'}), 400
-        
-        campaign = Campaign(
-            name=data['name'],
-            description=data.get('description'),
-            start_date=start_date,
-            end_date=end_date,
-            available_gadgets=data.get('available_gadgets'),
-            target_audience=data.get('target_audience'),
-            budget=data.get('budget'),
-            created_by=current_user_id
-        )
-        
-        db.session.add(campaign)
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Campagne créée avec succès',
-            'campaign': campaign.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    def is_current(self):
+        today = date.today()
+        return self.start_date <= today <= self.end_date
 
-@campaign_bp.route('/<int:campaign_id>', methods=['PUT'])
-@jwt_required()
-def update_campaign(campaign_id):
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not (user.is_superviseur() or user.is_administrateur() or user.is_super_administrateur()):
-            return jsonify({'error': 'Permissions insuffisantes'}), 403
-        
-        campaign = Campaign.query.get(campaign_id)
-        if not campaign:
-            return jsonify({'error': 'Campagne non trouvée'}), 404
-        
-        data = request.get_json()
-        
-        if 'name' in data:
-            campaign.name = data['name']
-        if 'description' in data:
-            campaign.description = data['description']
-        if 'start_date' in data:
-            campaign.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
-        if 'end_date' in data:
-            campaign.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
-        if 'is_active' in data:
-            campaign.is_active = data['is_active']
-        if 'available_gadgets' in data:
-            campaign.available_gadgets = data['available_gadgets']
-        if 'target_audience' in data:
-            campaign.target_audience = data['target_audience']
-        if 'budget' in data:
-            campaign.budget = data['budget']
-        
-        campaign.updated_at = datetime.utcnow()
-        
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Campagne mise à jour avec succès',
-            'campaign': campaign.to_dict()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    def is_upcoming(self):
+        today = date.today()
+        return self.start_date > today
 
-@campaign_bp.route('/<int:campaign_id>', methods=['DELETE'])
-@jwt_required()
-def delete_campaign(campaign_id):
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not (user.is_administrateur() or user.is_super_administrateur()):
-            return jsonify({'error': 'Permissions insuffisantes'}), 403
-        
-        campaign = Campaign.query.get(campaign_id)
-        if not campaign:
-            return jsonify({'error': 'Campagne non trouvée'}), 404
-        
-        db.session.delete(campaign)
-        db.session.commit()
-        
-        return jsonify({'message': 'Campagne supprimée avec succès'}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    def is_past(self):
+        today = date.today()
+        return self.end_date < today
 
-@campaign_bp.route('/<int:campaign_id>/stats', methods=['GET'])
-@jwt_required()
-def get_campaign_stats(campaign_id):
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not (user.is_superviseur() or user.is_administrateur() or user.is_super_administrateur()):
-            return jsonify({'error': 'Permissions insuffisantes'}), 403
-        
-        campaign = Campaign.query.get(campaign_id)
-        if not campaign:
-            return jsonify({'error': 'Campagne non trouvée'}), 404
-        
-        stats = {
-            'campaign_info': campaign.to_dict(),
-            'total_sales': campaign.get_total_sales(),
-            'total_people_approached': campaign.get_total_people_approached(),
-            'total_people_purchased': campaign.get_total_people_purchased(),
-            'conversion_rate': campaign.get_campaign_conversion_rate(),
-            'promoters_performance': campaign.get_promoters_performance()
+    def get_total_sales(self):
+        total = 0
+        for data in self.promotion_data:
+            total += data.products_sold or 0
+        return total
+
+    def get_total_people_approached(self):
+        total = 0
+        for data in self.promotion_data:
+            total += data.people_approached or 0
+        return total
+
+    def get_total_people_purchased(self):
+        total = 0
+        for data in self.promotion_data:
+            total += data.people_purchased or 0
+        return total
+
+    def get_campaign_conversion_rate(self):
+        approached = self.get_total_people_approached()
+        purchased = self.get_total_people_purchased()
+        if approached > 0:
+            return round((purchased / approached) * 100, 2)
+        return 0
+
+    def get_promoters_performance(self):
+        performance = {}
+        for data in self.promotion_data:
+            promoter_name = data.promoter_name
+            if promoter_name not in performance:
+                performance[promoter_name] = {
+                    'total_sales': 0,
+                    'total_approached': 0,
+                    'total_purchased': 0,
+                    'missions_count': 0
+                }
+            
+            performance[promoter_name]['total_sales'] += data.products_sold or 0
+            performance[promoter_name]['total_approached'] += data.people_approached or 0
+            performance[promoter_name]['total_purchased'] += data.people_purchased or 0
+            performance[promoter_name]['missions_count'] += 1
+
+        # Calculer le taux de conversion pour chaque promotrice
+        for promoter in performance:
+            approached = performance[promoter]['total_approached']
+            purchased = performance[promoter]['total_purchased']
+            if approached > 0:
+                performance[promoter]['conversion_rate'] = round((purchased / approached) * 100, 2)
+            else:
+                performance[promoter]['conversion_rate'] = 0
+
+        return performance
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'is_active': self.is_active,
+            'created_by': self.created_by,
+            'available_gadgets': self.available_gadgets,
+            'target_audience': self.target_audience,
+            'budget': self.budget,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_current': self.is_current(),
+            'is_upcoming': self.is_upcoming(),
+            'is_past': self.is_past()
         }
-        
-        return jsonify({'stats': stats}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
+    def __repr__(self):
+        return f'<Campaign {self.name}>'
+
