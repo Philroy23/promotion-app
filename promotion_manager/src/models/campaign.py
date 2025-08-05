@@ -1,3 +1,4 @@
+# VERSION CORRIGEE
 from database import db
 from datetime import datetime, date
 
@@ -17,7 +18,6 @@ class Campaign(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relations
     promotion_data = db.relationship('PromotionData', backref='campaign', lazy=True)
 
     def is_current(self):
@@ -74,7 +74,6 @@ class Campaign(db.Model):
             performance[promoter_name]['total_purchased'] += data.people_purchased or 0
             performance[promoter_name]['missions_count'] += 1
 
-        # Calculer le taux de conversion pour chaque promotrice
         for promoter in performance:
             approached = performance[promoter]['total_approached']
             purchased = performance[promoter]['total_purchased']
@@ -85,21 +84,24 @@ class Campaign(db.Model):
 
         return performance
 
-   def to_dict(self):
-    return {
-        'id': self.id,
-        'name': self.name,
-        'description': self.description,
-        'start_date': self.start_date.isoformat() if self.start_date else None,
-        'end_date': self.end_date.isoformat() if self.end_date else None,
-        'is_active': self.is_active,
-        'created_by': self.created_by,
-        'available_gadgets': self.available_gadgets,
-        'target_audience': self.target_audience,
-        'budget': self.budget,
-        'created_at': self.created_at.isoformat() if self.created_at else None,
-        'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-        'is_current': self.is_current(),
-        'is_upcoming': self.is_upcoming(),
-        'is_past': self.is_past()
-    }
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'is_active': self.is_active,
+            'created_by': self.created_by,
+            'available_gadgets': self.available_gadgets,
+            'target_audience': self.target_audience,
+            'budget': self.budget,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_current': self.is_current(),
+            'is_upcoming': self.is_upcoming(),
+            'is_past': self.is_past()
+        }
+
+    def __repr__(self):
+        return f'<Campaign {self.name}>'
