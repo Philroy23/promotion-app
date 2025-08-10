@@ -12,23 +12,23 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Configuration de JWT
-    app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key") # Change this in production!
+    app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key")
 
     # Initialisation des extensions
     db.init_app(app)
     jwt = JWTManager(app)
-    CORS(app) # Permet les requêtes cross-origin pour le développement
+    CORS(app)
 
-    # Importation des modèles pour s'assurer qu'ils sont connus de SQLAlchemy
+    # Importation des modèles
     from models.user import User
     from models.campaign import Campaign
     from models.promotion_data import PromotionData
 
-    # Création des tables de la base de données si elles n'existent pas
+    # Création des tables de la base de données
     with app.app_context():
         db.create_all()
 
-    # Enregistrement des blueprints (routes API)
+    # Enregistrement des blueprints (routes API) - DEPLACE ICI
     from routes.auth import auth_bp
     from routes.campaign import campaign_bp
     from routes.promotion_data import promotion_data_bp
