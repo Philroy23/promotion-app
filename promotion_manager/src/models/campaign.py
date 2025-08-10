@@ -3,6 +3,8 @@ from datetime import datetime, date
 
 class Campaign(db.Model):
     __tablename__ = 'campaigns'
+    __table_args__ = {'extend_existing': True}
+
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
